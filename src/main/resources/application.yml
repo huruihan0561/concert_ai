@@ -1,0 +1,107 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/concert_db?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  ai:
+    openai:
+      api-key: sk-1e3f3c634882483e8f53a3610496b72d
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-chat
+          temperature: 0.8
+
+  data:
+    redis:
+      enabled: true
+      port: 6379
+      database: 1
+      host: localhost
+
+  task:
+    scheduling:
+      enabled: true
+      pool:
+        size: 2
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+jwt:
+  secret: concert-secret-key
+  expiration: 86400000
+
+crawler:
+  singers:
+    - 周杰伦
+    - 薛之谦
+    - 李荣浩
+    - 毛不易
+    - 邓紫棋
+    - 陈奕迅
+    - 张杰
+    - 周深
+    - 汪苏泷
+  request-interval: 3000
+  timeout: 10000
+  user-agents:
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0"
+
+knife4j:
+  enable: true
+  production: false
+  setting:
+    language: zh_cn
+    enable-swagger-models: true
+    enable-document-keep: true
+    enable-dynamic-parameter: true
+    enable-group-order: true
+
+api:
+  amap:
+    key: d084cb4cbf99426cdf0a2c9e43333d19
+    hotel-url: https://restapi.amap.com/v3/place/text
+  weather:
+    qweather:
+      key: 22d1cb25135d44238fc6526655e45e6b
+  netease:
+    app-id: b3010d0000000000647457cfc961fa6e
+    private-key: MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDSGr9Jg8D2riVVqgN4Lu//LuhAwcO6NO69vZHS7XhPk2fDFit0FwsXXKjzHVJddTO7jGBb93c9A4mpVux/5BX1L6+ftOprMU7R7gPIAZFWoWALIKUPdAgNh/x6QKUzvmr71ptbSuBhqLp35W9qKShT/utzAr3t1asinbLGI3oKJRqjwFscusrCYi9tgcU8mnRJKaFehXUeg6+QNZ6pHsM+BoVKs06oQf+uXTuG6Q7+pLAAivoO9r6MclKMhaDSqOAVkNowlY0aige3scCQH+JTTDQwoHdaYQuamcjO6CY1aqqELKPbCnUlp+EAIRiV3aRWb9op2lu9Inw8ITx9bV+VAgMBAAECggEAA5HbxSp9aVONI9b3JyAZCMtpu8vvAOdsVQH3C8/oFuYIwcpLI7ZOhG+ZGURaxWa74chhTL64ImvAd4WYYEBY2f0t3nu2KfBbC4ZM7MrVjnEaypl3B8DDHAD/avNMDW401MSE004jCpjYhMO9PhMy9OCwhIPufcX6LYVOvmWsyciCmX4Fnh16CYD38cy7xWbbMAEosA9FIEPqpg3s2HVVkR/fubMpyPJPjazexNFK7ced3r1UW5KgZRKNZ8EWgKXftEBVsPLtLLc3wAc/S3LZ0alQaLxijb3poB85tKjsG/hVz+hKCr1U5XwJKVh5cTWvNREeXRceE+petOr0yr/hr4wKBgQDxKsT0hc1TICYu3STLpuXzkGOd1U0mk3wKxg8y0iMQil2ozell2eBO2++wg70qeCXKuYTqrH2FQh6oqV4xS8h6JCbfsL19ZXcawgyzMO08ml2wGS+v80KUIMJXXYaRjuk0IFISvUdCZ1zI3ORgUld2oNEo3mi69Dpstx9DPXs/wKBgQDemhE/TAJ6gPLJKX1yle4et3jUKWIRSnLUS0b2ZUCmPvIOSiLFTSeJs2p07IJobCl2DmY21yYegen8ywKX4gaD1dOLq05b2qdKRDbO6SRb/dC6RbtzNIR0Lw8ebr4BZysXt0GRZ1mqBloJFm+xlxM5xfLWkbTLrucyVBfV+vawKBgAxFHGrIQEh0mhMnccQHmd8bmjih1rHVJCAOEC0GJaj5ssMThr5jDd6CJiqJsDi8Z6tFgml9QYw9hTC1EblQUVRnevBqalwTHIkU5IWuEEIgDOZ63qLRGphrlcvj8+thpaW5CGkcZVYUJuq3xiadahxZ/FB//K1JTFKRwqCXB+YBAoGAbL/txTfGQqmi0LpIJTvhXGtsvuPDJwt7sUd0fc+jnSsMcKQHSJEL4PMeXOTdoFqbFC4KA0J91io+uoFSD4D3IucGdoAGelAUlvk4UcklUvxiSnKFsnwkhbYlYEhmPnVGG5Pvj9mkh8sFsg4oaJqH4vJwnfEgL/a+MAOQI+nCUCgYAB+WJg98E0Hcs0dtSG0xHj+Urh2LnCefNuwWXY2nOVQWbeJy6Bi4Qhi/gOJuFJYltO4W4oHDE5w3XYbfU7SeJgjFI8I1DRojyydADDv0QvT1ikwf9dQj4GrkkUEMADZaczUK21Uyq/r3Pr6Lyu1kgDefh11DBdMv83ja00CQ7VtA==
+
+# AI 配置
+ai:
+  api:
+    key: sk-1e3f3c634882483e8f53a3610496b72d
+    url: https://api.deepseek.com/v1/chat/completions
+    model: deepseek-chat
+
+# 通义千问配置（图片生成）
+dashscope:
+  api-key: sk-08121c662f4c49deb1c7d84a954af24f
+  model: qwen-image-2.0-pro
+
+server:
+  port: 8080
+
+# 图片存储配置
+image:
+  storage:
+    local-path: ./uploads/
+    access-url: http://localhost:8080/uploads/
+    use-oss: true
+
+# 阿里云OSS配置
+aliyun:
+  oss:
+    endpoint: oss-cn-beijing.aliyuncs.com
+    accessKeyId: LTAI5tRQjuKDpNeW4hQBmEi7
+    accessKeySecret: Pw3oEgkd4S7vftWjcuvqmc4OBWNIKK
+    bucketName: heritage-tourism
+    custom-domain: https://heritage-tourism.oss-cn-beijing.aliyuncs.com

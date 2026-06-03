@@ -1,0 +1,11 @@
+### 手动触发爬虫
+POST http://localhost:8080/api/concerts/crawl
+
+### 查询所有演唱会
+GET http://localhost:8080/api/concerts
+
+### 查询歌手列表
+GET http://localhost:8080/api/concerts/singers
+
+### 查询周杰伦的演唱会
+GET http://localhost:8080/api/concerts?singer=周杰伦
