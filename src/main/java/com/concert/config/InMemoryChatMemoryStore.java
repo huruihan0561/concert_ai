@@ -9,7 +9,9 @@ public class InMemoryChatMemoryStore implements ChatMemoryStore {
     private final Map<String, List<Message>> store = new ConcurrentHashMap<>();
     @Override
     public void saveMessages(String sessionId, List<Message> messages) {
-        store.put(sessionId, new ArrayList<>(messages));
+        List<Message> existing = store.getOrDefault(sessionId, new ArrayList<>());
+        existing.addAll(messages);
+        store.put(sessionId, existing);
     }
     @Override
     public List<Message> getMessages(String sessionId) {

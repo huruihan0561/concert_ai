@@ -1,99 +1,178 @@
-import { format, differenceInDays, differenceInHours, differenceInMinutes } from 'date-fns';
+import { format, differenceInDays, differenceInHours, differenceInMinutes, differenceInSeconds, isSameDay, addDays } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
+const parseDate = (dateString) => {
+  if (!dateString) return null;
+  try {
+    const normalized = String(dateString).replace(' ', 'T');
+    const parsed = new Date(normalized);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  } catch {
+    return null;
+  }
+};
 
 export const formatDate = (dateString, formatStr = 'yyyy年MM月dd日 HH:mm') => {
   if (!dateString) return '-';
+  const parsed = parseDate(dateString);
+  if (!parsed) return dateString;
   try {
-    const normalized = dateString.replace(' ', 'T');
-    return format(new Date(normalized), formatStr, { locale: zhCN });
+    return format(parsed, formatStr, { locale: zhCN });
   } catch {
     return dateString;
   }
 };
 
 export const getCountdown = (targetDate) => {
-  if (!targetDate) return null;
+  const target = parseDate(targetDate);
+  if (!target) return null;
 
-  // 统一将 "2026-06-12 19:30:00" 转为 ISO 格式 "2026-06-12T19:30:00"
-  const normalized = targetDate.replace(' ', 'T');
-  const target = new Date(normalized);
   const now = new Date();
 
-  if (isNaN(target.getTime())) {
-    return null;
-  }
-
   if (target < now) {
-    return { expired: true, text: '已结束' };
+    return { expired: true, text: '已结束', clockText: '00:00:00', days: 0, hours: 0, minutes: 0, seconds: 0 };
   }
 
   const days = differenceInDays(target, now);
   const hours = differenceInHours(target, now) % 24;
   const minutes = differenceInMinutes(target, now) % 60;
+  const seconds = differenceInSeconds(target, now) % 60;
+  const clockHours = days > 0 ? days * 24 + hours : hours;
 
   return {
     expired: false,
     days,
     hours,
     minutes,
-    text: days > 0 ? `${days}天 ${hours}小时` : `${hours}小时 ${minutes}分钟`
+    seconds,
+    text: days > 0 ? `${days}天 ${hours}小时` : `${hours}小时 ${minutes}分钟`,
+    clockText: `${String(clockHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
   };
+};
+
+export const getConcertStatus = (showTime) => {
+  if (!showTime) return '待定';
+
+  const showDate = parseDate(showTime);
+  const now = new Date();
+
+  if (!showDate) return '待定';
+  if (showDate < now) return '已结束';
+
+  const diffDays = differenceInDays(showDate, now);
+  if (diffDays <= 3) return '即将开演';
+  if (diffDays <= 14) return '热售中';
+  return '可预约';
 };
 
 export const getStatusColor = (status) => {
   const statusMap = {
-    '待开售': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
-    '预售中': 'bg-green-500/20 text-green-400 border-green-500/50',
-    '售票中': 'bg-blue-500/20 text-blue-400 border-blue-500/50',
-    '已结束': 'bg-gray-500/20 text-gray-400 border-gray-500/50',
-    '即将开始': 'bg-purple-500/20 text-purple-400 border-purple-500/50',
+    可预约: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+    热售中: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    即将开演: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40',
+    已结束: 'bg-white/10 text-white/50 border-white/10',
+    待定: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
   };
-  return statusMap[status] || 'bg-gray-500/20 text-gray-400';
+  return statusMap[status] || statusMap.待定;
 };
 
-export const getStatusText = (status) => {
-  return status || '未知';
-};
+export const getStatusText = (status) => status || '待定';
 
 export const formatPrice = (price) => {
   if (!price) return '价格待定';
-  return `¥${price}`;
+  return String(price).startsWith('¥') ? price : `¥${price}`;
 };
 
-export const cn = (...classes) => {
-  return classes.filter(Boolean).join(' ');
+export const buildConcertDateRangeLabel = (concerts = []) => {
+  const validDates = concerts
+    .map((concert) => parseDate(concert.showTime))
+    .filter(Boolean)
+    .sort((a, b) => a.getTime() - b.getTime());
+
+  if (!validDates.length) return '';
+  if (validDates.length === 1) return format(validDates[0], 'MM月dd日', { locale: zhCN });
+
+  // 多个场次，显示日期范围
+  const first = validDates[0];
+  const last = validDates[validDates.length - 1];
+
+  // 判断是否跨月
+  const isSameMonth = first.getMonth() === last.getMonth() && first.getFullYear() === last.getFullYear();
+
+  if (isSameMonth) {
+    return `${format(first, 'MM月dd', { locale: zhCN })}-${format(last, 'dd日', { locale: zhCN })}`;
+  } else {
+    return `${format(first, 'MM月dd', { locale: zhCN })}-${format(last, 'MM月dd日', { locale: zhCN })}`;
+  }
 };
 
-export const cities = [
-  { id: 'beijing', name: '北京', venue: '国家体育场（鸟巢）' },
-  { id: 'shanghai', name: '上海', venue: '梅赛德斯-奔驰文化中心' },
-  { id: 'guangzhou', name: '广州', venue: '广州体育馆' },
-  { id: 'shenzhen', name: '深圳', venue: '深圳湾体育中心' },
-  { id: 'chengdu', name: '成都', venue: '成都凤凰山体育公园' },
-  { id: 'hangzhou', name: '杭州', venue: '杭州奥体中心' },
-  { id: 'nanjing', name: '南京', venue: '南京奥体中心' },
-  { id: 'wuhan', name: '武汉', venue: '武汉体育中心' },
-  { id: 'xian', name: '西安', venue: '西安奥体中心' },
-  { id: 'chongqing', name: '重庆', venue: '重庆奥体中心' },
-];
+export const groupConcertsBySingerAndVenue = (concerts = []) => {
+  const groups = new Map();
 
-export const singers = [
-  '周杰伦', '薛之谦', '李荣浩', '毛不易', '邓紫棋', 
-  '陈奕迅', '张杰', '周深', '汪苏泷', '林俊杰',
-  '五月天', '张学友', '刘德华', '王菲', '李宇春'
-];
+  concerts.forEach((concert) => {
+    const key = [concert.singer, concert.city, concert.venue].join('__');
+    const current = groups.get(key) || [];
+    current.push(concert);
+    groups.set(key, current);
+  });
 
-export const budgetOptions = [
-  { value: 'low', label: '经济型', min: 0, max: 1000, desc: '¥0-1000' },
-  { value: 'medium', label: '舒适型', min: 1000, max: 3000, desc: '¥1000-3000' },
-  { value: 'high', label: '豪华型', min: 3000, max: 5000, desc: '¥3000-5000' },
-  { value: 'luxury', label: '奢华型', min: 5000, max: 999999, desc: '¥5000+' },
-];
+  return Array.from(groups.values()).map((items) => {
+    const sorted = [...items].sort((a, b) => {
+      const aTime = parseDate(a.showTime)?.getTime() || 0;
+      const bTime = parseDate(b.showTime)?.getTime() || 0;
+      return aTime - bTime;
+    });
 
-export const preferenceOptions = [
-  { value: 'food', label: '美食探索', icon: '🍜', desc: '寻找当地特色美食' },
-  { value: 'sightseeing', label: '景点打卡', icon: '📸', desc: '游览热门景点' },
-  { value: 'nightlife', label: '夜景体验', icon: '🌃', desc: '欣赏城市夜景' },
-  { value: 'shopping', label: '购物逛街', icon: '🛍️', desc: '探索商圈购物' },
-  { value: 'culture', label: '文化体验', icon: '🎭', desc: '感受当地文化' },
-];
+    const primary = sorted[0];
+    const dateRangeLabel = buildConcertDateRangeLabel(sorted);
+
+    return {
+      ...primary,
+      groupedConcertIds: sorted.map((item) => item.id),
+      groupedShows: sorted,
+      dateRangeLabel,
+      showCount: sorted.length,
+    };
+  });
+};
+
+export const cn = (...classes) => classes.filter(Boolean).join(' ');
+
+export const getStoredSessionId = () => {
+  let sessionId = localStorage.getItem('concert_agent_session_id');
+  if (!sessionId) {
+    sessionId = generateUUID();
+    localStorage.setItem('concert_agent_session_id', sessionId);
+  }
+  return sessionId;
+};
+
+export const resetStoredSessionId = () => {
+    const nextSessionId = generateUUID();
+  localStorage.setItem('concert_agent_session_id', nextSessionId);
+  return nextSessionId;
+};
+
+export const setStoredSessionId = (id) => {
+  localStorage.setItem('concert_agent_session_id', id);
+};
+
+export const getStoredUserId = () => {
+  let userId = localStorage.getItem('concert_demo_user_id');
+  if (!userId) {
+    userId = '10001';
+    localStorage.setItem('concert_demo_user_id', userId);
+  }
+  return Number(userId);
+};

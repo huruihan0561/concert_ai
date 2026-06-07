@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { orchestratorApi } from '../utils/api';
+import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
+import { getStoredSessionId, setStoredSessionId, getStoredUserId } from '../utils/helpers';
 
 const AppContext = createContext();
 
@@ -9,68 +9,59 @@ export const useApp = () => {
   return context;
 };
 
+const SESSION_KEY_CONCERT = 'concertai_selected_concert';
+
+// 内部版本号，用于触发跨组件重渲染
+let _concertVersion = 0;
+const _versionSubscribers = new Set();
+
+function getStoredConcert() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY_CONCERT);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+// 对外暴露：写入 sessionStorage 并通知所有订阅者重读
+export function setSelectedConcert(concert) {
+  if (concert) {
+    sessionStorage.setItem(SESSION_KEY_CONCERT, JSON.stringify(concert));
+  } else {
+    sessionStorage.removeItem(SESSION_KEY_CONCERT);
+  }
+  _concertVersion++;
+  _versionSubscribers.forEach(fn => fn(_concertVersion));
+}
+
 export const AppProvider = ({ children }) => {
-  const [selectedConcert, setSelectedConcert] = useState(null);
-  const [currentPlan, setCurrentPlan] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState(null);
-  const [playlist, setPlaylist] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const userId = useMemo(() => getStoredUserId(), []);
+  const sessionId = useMemo(() => getStoredSessionId(), []);
 
-  // ── 统一会话管理（文档流程：进入页面 → new-session → 存储 sessionId）────────
-  const [orchSession, setOrchSession] = useState(() => {
-    const stored = localStorage.getItem('orch_session_id');
-    return stored || null;
-  });
-  const [orchUserId] = useState(() => {
-    let uid = localStorage.getItem('orch_user_id');
-    if (!uid) {
-      uid = String(Math.floor(Math.random() * 99999) + 10000);
-      localStorage.setItem('orch_user_id', uid);
-    }
-    return uid;
-  });
+  // 版本号 state，订阅全局 _concertVersion 变化
+  const [concertVersion, setConcertVersion] = useState(_concertVersion);
 
-  // 初始化：没有 sessionId 则新建
   useEffect(() => {
-    if (!orchSession) {
-      orchestratorApi.newSession().then(res => {
-        if (res.success) {
-          localStorage.setItem('orch_session_id', res.data);
-          setOrchSession(res.data);
-        }
-      }).catch(console.error);
-    }
-  }, [orchSession]);
-
-  const selectConcert = useCallback((concert) => {
-    setSelectedConcert(concert);
-    setCurrentPlan(null);
+    _versionSubscribers.add(setConcertVersion);
+    return () => {
+      _versionSubscribers.delete(setConcertVersion);
+    };
   }, []);
 
-  const updatePlan = useCallback((plan) => setCurrentPlan(plan), []);
+  // selectedConcert 依赖版本号，每次版本变化自动重新读取 sessionStorage
+  const selectedConcert = useMemo(getStoredConcert, [concertVersion]);
 
-  const togglePlay = useCallback(() => setIsPlaying(prev => !prev), []);
-
-  const playTrack = useCallback((track) => {
-    setCurrentTrack(track);
-    setIsPlaying(true);
-  }, []);
-
-  const setPlaylistData = useCallback((tracks) => {
-    setPlaylist(tracks);
-    if (tracks.length > 0) {
-      const trackExists = currentTrack && tracks.find(t => t.id === currentTrack.id);
-      if (!currentTrack || !trackExists) setCurrentTrack(tracks[0]);
-    }
-  }, [currentTrack]);
-
-  const value = {
-    selectedConcert, currentPlan, isPlaying, currentTrack, playlist, loading, setLoading,
-    selectConcert, updatePlan, togglePlay, playTrack, setPlaylistData,
-    // 统一会话
-    orchSession, orchUserId,
-  };
+  const value = useMemo(
+    () => ({
+      selectedConcert,
+      setSelectedConcert,
+      userId,
+      sessionId,
+      setSessionId: setStoredSessionId,
+    }),
+    [selectedConcert, userId, sessionId]
+  );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

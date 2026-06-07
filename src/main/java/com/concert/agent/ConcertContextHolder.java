@@ -9,14 +9,14 @@ import java.util.concurrent.TimeUnit;
 @Component
 @Slf4j
 public class ConcertContextHolder {
+
     private final StringRedisTemplate redisTemplate;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private static final String SESSION_PREFIX = "orch:session:";
     private static final long TTL_HOURS = 72;
 
     public ConcertContextHolder(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
-        this.objectMapper = new ObjectMapper();
     }
 
     public void saveSession(UserSession session) {
@@ -44,18 +44,9 @@ public class ConcertContextHolder {
         redisTemplate.delete(SESSION_PREFIX + sessionId);
     }
 
-    public String generateSessionId() {
-        return "orch_" + System.currentTimeMillis() + "_" + (int)(Math.random() * 1000);
-    }
-
-    public void registerFan(String singer, String city, Long userId) {
+    public void registerFan(String singer, String city, String userId) {
         String key = "orch:fans:" + singer + ":" + city;
-        redisTemplate.opsForSet().add(key, userId.toString());
+        redisTemplate.opsForSet().add(key, userId);
         redisTemplate.expire(key, 30, TimeUnit.DAYS);
-    }
-
-    public java.util.Set<String> getNearbyFans(String singer, String city) {
-        String key = "orch:fans:" + singer + ":" + city;
-        return redisTemplate.opsForSet().members(key);
     }
 }

@@ -13,6 +13,8 @@ CREATE TABLE concert (
                          status VARCHAR(20) COMMENT '售票状态',
                          image_url VARCHAR(500) COMMENT '海报图'
 );
+ALTER TABLE concert ADD COLUMN seat_map_url VARCHAR(500) COMMENT '座位图URL（2.5D可视化用）';
+ALTER TABLE concert ADD COLUMN has_2d5_view TINYINT DEFAULT 0 COMMENT '是否有2.5D座位视图';
 
 -- 2. 城市信息表
 CREATE TABLE city_info (
@@ -52,72 +54,6 @@ CREATE TABLE scenic (
                         duration VARCHAR(50) COMMENT '建议游玩时长',
                         popularity INT DEFAULT 0 COMMENT '热门度',
                         FOREIGN KEY (city_id) REFERENCES city_info(id)
-);
-
--- 5. 餐饮推荐表
-CREATE TABLE food_recommendation (
-                                     id BIGINT PRIMARY KEY AUTO_INCREMENT comment '主键ID',
-                                     city_id BIGINT NOT NULL comment '城市ID',
-                                     restaurant_name VARCHAR(200) NOT NULL comment '餐厅名称',
-                                     image_url VARCHAR(500) COMMENT '图片',
-                                     cuisine VARCHAR(50) COMMENT '菜系',
-                                     address VARCHAR(300) comment '地址',
-                                     price_range VARCHAR(50) comment '价格范围',
-                                     rating INT DEFAULT 3 COMMENT '1-5',
-                                     features TEXT COMMENT '特色菜JSON',
-                                     FOREIGN KEY (city_id) REFERENCES city_info(id)
-);
-
--- 6. 交通方案表
-CREATE TABLE transportation_option (
-                                       id BIGINT PRIMARY KEY AUTO_INCREMENT comment '主键ID',
-                                       from_city VARCHAR(50) NOT NULL COMMENT '出发城市',
-                                       to_city VARCHAR(50) NOT NULL COMMENT '到达城市',
-                                       option_type VARCHAR(20) NOT NULL COMMENT '出行方式：train/flight/car',
-                                       departure_time DATETIME NOT NULL comment '出发时间',
-                                       arrival_time DATETIME NOT NULL comment '到达时间',
-                                       price DECIMAL(10,2) comment '价格',
-                                       provider VARCHAR(100) COMMENT '运营商',
-                                       seat_type VARCHAR(50) comment '座位类型'
-);
-
--- 7. 天气表
-CREATE TABLE weather_info (
-                              id BIGINT PRIMARY KEY AUTO_INCREMENT comment '主键ID',
-                              city VARCHAR(50) NOT NULL comment '城市',
-                              date DATE NOT NULL comment '日期',
-                              weather VARCHAR(50) comment '天气',
-                              temperature_high DECIMAL(5,1) comment '最高温度',
-                              temperature_low DECIMAL(5,1) comment '最低温度',
-                              dressing_advice VARCHAR(200) comment '穿衣建议'
-);
-
--- 8.场馆3D模型数据表
-CREATE TABLE venue_model_3d (
-                                id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
-                                venue_name VARCHAR(100) NOT NULL COMMENT '场馆名称',
-                                venue_city VARCHAR(50) NOT NULL COMMENT '所在城市',
-                                venue_address VARCHAR(300) COMMENT '详细地址',
-                                venue_description TEXT COMMENT '场馆简介',
-                                latitude DECIMAL(10, 6) COMMENT '场馆纬度',
-                                longitude DECIMAL(11, 6) COMMENT '场馆经度',
-                                model_type VARCHAR(20) DEFAULT 'gltf' COMMENT '模型类型: gltf/obj/fbx/usdz',
-                                model_url VARCHAR(500) NOT NULL COMMENT '模型文件URL',
-                                texture_url VARCHAR(500) COMMENT '纹理贴图URL',
-                                thumbnail_url VARCHAR(500) COMMENT '缩略图URL（用于列表预览）',
-                                panorama_url VARCHAR(500) COMMENT '全景图URL（可选，用于VR模式）',
-                                seat_capacity INT COMMENT '总座位数',
-                                layout_data TEXT COMMENT '座位布局数据(JSON格式)',
-                                facility_positions TEXT COMMENT '设施位置(JSON格式)',
-                                interaction_script TEXT COMMENT '自定义交互脚本(JS)',
-                                enable_auto_rotate BOOLEAN DEFAULT TRUE COMMENT '是否允许自动旋转',
-                                enable_zoom BOOLEAN DEFAULT TRUE COMMENT '是否允许缩放',
-                                default_zoom_level DECIMAL(3,2) DEFAULT 1.0 COMMENT '默认缩放级别',
-                                status VARCHAR(20) DEFAULT 'active' COMMENT '状态: active/inactive/building',
-                                version INT DEFAULT 1 COMMENT '模型版本号',
-                                INDEX idx_venue_name (venue_name),
-                                INDEX idx_venue_city (venue_city),
-                                INDEX idx_status (status)
 );
 
 
@@ -241,16 +177,53 @@ INSERT INTO playlist (singer_name, song_list) VALUES
                                                   ('范玮琪', '["最初的梦想","一个像夏天一个像秋天","最重要的决定","是非题"]');
 
 
-CREATE TABLE `user` (
-                        `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
-                        `username` VARCHAR(50) COMMENT '用户名',
-                        `avatar_url` VARCHAR(500) COMMENT '头像URL',
-                        `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE TABLE user_follow_concert (
                                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                      user_id BIGINT NOT NULL,
                                      concert_id BIGINT NOT NULL,
                                      follow_time DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 用户提醒表
+CREATE TABLE IF NOT EXISTS user_reminder (
+                                             id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                             user_id VARCHAR(50) NOT NULL COMMENT '用户ID',
+                                             concert_id BIGINT NOT NULL COMMENT '演唱会ID',
+                                             reminder_type VARCHAR(20) NOT NULL COMMENT '提醒类型：TICKET/PRICE/TRAVEL/WEATHER/COUNTDOWN',
+                                             title VARCHAR(100) NOT NULL COMMENT '提醒标题',
+                                             content TEXT COMMENT '提醒内容',
+                                             trigger_time DATETIME NOT NULL COMMENT '提醒触发时间',
+                                             sent BOOLEAN DEFAULT FALSE COMMENT '是否已发送',
+                                             `read` BOOLEAN DEFAULT FALSE COMMENT '是否已读',
+                                             create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                             extra_data TEXT COMMENT '额外数据JSON',
+                                             INDEX idx_user_id (user_id),
+                                             INDEX idx_concert_id (concert_id),
+                                             INDEX idx_trigger_time (trigger_time),
+                                             INDEX idx_sent (sent)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户提醒表';
+
+
+-- 1. 薛之谦 - 洛阳站 (id=1,2,3 三场，共用同一张座位图)
+UPDATE concert SET has_2d5_view = 1, seat_map_url = '/images/concerts/seat_maps/xuezhiqian_luoyang.jpg' WHERE singer = '薛之谦' AND city = '洛阳';
+
+-- 2. 徐良 - 青岛站 (id=4,5,6)
+UPDATE concert SET has_2d5_view = 1, seat_map_url = '/images/concerts/seat_maps/xuliang_qingdao.jpg' WHERE singer = '徐良' AND city = '青岛';
+
+-- 3. 汪苏泷 - 成都站 (id=7,8,9)
+UPDATE concert SET has_2d5_view = 1, seat_map_url = '/images/concerts/seat_maps/wangsulong_chengdu.jpg' WHERE singer = '汪苏泷' AND city = '成都';
+
+-- 4. 马思唯 - 大连站 (id=10)
+UPDATE concert SET has_2d5_view = 1, seat_map_url = '/images/concerts/seat_maps/masiwei_dalian.jpg' WHERE singer = '马思唯' AND city = '大连';
+
+-- 5. 大张伟 - 郑州站 (id=13)
+UPDATE concert SET has_2d5_view = 1, seat_map_url = '/images/concerts/seat_maps/dazhangwei_zhengzhou.jpg' WHERE singer = '大张伟' AND city = '郑州';
+
+-- 6. 凤凰传奇 - 南京站 (id=16,17,18)
+UPDATE concert SET has_2d5_view = 1, seat_map_url = '/images/concerts/seat_maps/fenghuangchuanqi_nanjing.jpg' WHERE singer = '凤凰传奇' AND city = '南京';
+
+-- 7. 黄丽玲 - 北京站 (id=24,25)
+UPDATE concert SET has_2d5_view = 1, seat_map_url = '/images/concerts/seat_maps/huanglining_beijing.jpg' WHERE singer = '黄丽玲' AND city = '北京';
+
+-- 8. 张杰 - 新加坡站 (id=26)
+UPDATE concert SET has_2d5_view = 1, seat_map_url = '/images/concerts/seat_maps/zhangjie_singapore.jpg' WHERE singer = '张杰' AND city = '新加坡';

@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 public class UserFollowConcert {
     @TableId(type = IdType.AUTO)
     private Long id;
-    private Long userId;
+    private String userId;
     private Long concertId;
     private LocalDateTime followTime;
 }

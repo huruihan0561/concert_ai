@@ -1,0 +1,10 @@
+{
+  "concertId": 10,
+  "singer": "马思唯",
+  "venue": "大连体育中心体育馆",
+  "backgroundImage": "/images/concerts/seat_maps/masiwei_dalian.jpg",
+  "areas": [
+    {"id": "A", "name": "内场区", "shape": "rect", "coords": "300,200,700,400", "priceRange": "¥999", "description": "内场区，近距离感受说唱现场"},
+    {"id": "B", "name": "看台区", "shape": "rect", "coords": "150,100,850,200", "priceRange": "¥399", "description": "看台区，视野开阔"}
+  ]
+}

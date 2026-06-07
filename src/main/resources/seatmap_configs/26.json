@@ -1,0 +1,12 @@
+{
+  "concertId": 26,
+  "singer": "张杰",
+  "venue": "新加坡室内体育馆",
+  "backgroundImage": "/images/concerts/seat_maps/zhangjie_singapore.jpg",
+  "areas": [
+    {"id": "CAT1", "name": "CAT1", "shape": "poly", "coords": "400,250,500,250,500,350,400,350", "priceRange": "SGD 348", "description": "最佳观演区域"},
+    {"id": "CAT2", "name": "CAT2", "shape": "poly", "coords": "500,250,600,250,600,350,500,350", "priceRange": "SGD 298", "description": "内场前排"},
+    {"id": "CAT3", "name": "CAT3", "shape": "poly", "coords": "300,200,700,200,700,280,300,280", "priceRange": "SGD 258", "description": "内场中排"},
+    {"id": "CAT5", "name": "看台区", "shape": "poly", "coords": "150,100,750,100,750,180,150,180", "priceRange": "SGD 188", "description": "看台区域"}
+  ]
+}

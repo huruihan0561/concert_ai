@@ -18,7 +18,7 @@ public class SwaggerConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("演唱会攻略系统 API 文档")
-                        .description("Knife4j 增强版接口文档 - 提供演唱会管理、购票攻略、用户管理等功能")
+                        .description("SpringDoc 接口文档 - 提供演唱会管理、购票攻略、用户管理等功能")
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("开发团队")

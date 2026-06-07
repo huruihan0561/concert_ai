@@ -1,0 +1,11 @@
+{
+  "concertId": 4,
+  "singer": "徐良",
+  "venue": "青岛市民健身中心体育馆",
+  "backgroundImage": "/images/concerts/seat_maps/xuliang_qingdao.jpg",
+  "areas": [
+    {"id": "VIP", "name": "VIP区", "shape": "poly", "coords": "400,250,500,250,500,350,400,350", "priceRange": "¥1580", "description": "VIP区，近距离互动"},
+    {"id": "A", "name": "内场A区", "shape": "poly", "coords": "350,200,550,200,550,300,350,300", "priceRange": "¥1280", "description": "内场前排"},
+    {"id": "B", "name": "看台区", "shape": "poly", "coords": "200,100,700,100,700,200,200,200", "priceRange": "¥380", "description": "看台区"}
+  ]
+}

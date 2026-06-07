@@ -1,0 +1,12 @@
+{
+  "concertId": 24,
+  "singer": "黄丽玲",
+  "venue": "华熙LIVE·五棵松",
+  "backgroundImage": "/images/concerts/seat_maps/huanglining_beijing.jpg",
+  "areas": [
+    {"id": "A1", "name": "A1区", "shape": "poly", "coords": "400,250,500,250,500,350,400,350", "priceRange": "¥1380", "description": "内场前排"},
+    {"id": "A2", "name": "A2区", "shape": "poly", "coords": "500,250,600,250,600,350,500,350", "priceRange": "¥1080", "description": "内场右侧"},
+    {"id": "B", "name": "看台区", "shape": "poly", "coords": "200,150,700,150,700,250,200,250", "priceRange": "¥580", "description": "看台区"},
+    {"id": "C", "name": "山顶区", "shape": "poly", "coords": "100,100,800,100,800,150,100,150", "priceRange": "¥380", "description": "山顶区"}
+  ]
+}

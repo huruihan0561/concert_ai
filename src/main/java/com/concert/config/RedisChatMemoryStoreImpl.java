@@ -17,7 +17,9 @@ public class RedisChatMemoryStoreImpl implements ChatMemoryStore {
     }
     @Override
     public void saveMessages(String sessionId, List<Message> messages) {
-        redisTemplate.opsForValue().set(KEY_PREFIX + sessionId, JSON.toJSONString(messages));
+        List<Message> existing = getMessages(sessionId);
+        existing.addAll(messages);
+        redisTemplate.opsForValue().set(KEY_PREFIX + sessionId, JSON.toJSONString(existing));
     }
     @Override
     public List<Message> getMessages(String sessionId) {

@@ -1,0 +1,48 @@
+{
+  "concertId": 7,
+  "singer": "汪苏泷",
+  "venue": "成都东安湖体育公园主体育场",
+  "backgroundImage": "/images/concerts/seat_maps/wangsulong_chengdu.jpg",
+  "areas": [
+    {
+      "id": "A1",
+      "name": "A1区",
+      "shape": "poly",
+      "coords": "400,180,500,180,500,280,400,280",
+      "priceRange": "¥1680",
+      "description": "内场VIP区，最近距离感受汪苏泷的音乐"
+    },
+    {
+      "id": "A2",
+      "name": "A2区",
+      "shape": "poly",
+      "coords": "500,180,600,180,600,280,500,280",
+      "priceRange": "¥1280",
+      "description": "内场右侧，视野开阔"
+    },
+    {
+      "id": "A3",
+      "name": "A3区",
+      "shape": "poly",
+      "coords": "300,180,400,180,400,280,300,280",
+      "priceRange": "¥1280",
+      "description": "内场左侧"
+    },
+    {
+      "id": "B",
+      "name": "看台区",
+      "shape": "poly",
+      "coords": "150,100,750,100,750,180,150,180",
+      "priceRange": "¥880",
+      "description": "看台前排，俯瞰舞台"
+    },
+    {
+      "id": "C",
+      "name": "看台二层",
+      "shape": "poly",
+      "coords": "100,50,800,50,800,100,100,100",
+      "priceRange": "¥380",
+      "description": "性价比之选"
+    }
+  ]
+}

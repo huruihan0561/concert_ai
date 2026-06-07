@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { getStoredUserId } from './helpers';
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = '/concert/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -16,142 +17,115 @@ api.interceptors.response.use(
   }
 );
 
-// ─────────────────────────────────────────────
-// 演唱会管家总控 (ConcertOrchestratorController)
-// ─────────────────────────────────────────────
-export const orchestratorApi = {
-  // 1.1 新建会话
-  newSession: () => api.post('/orchestrator/new-session'),
+const normalizeResult = (result) => {
+  if (result && typeof result === 'object' && 'success' in result) {
+    return result;
+  }
 
-  // 1.2 统一聊天入口
-  chat: (sessionId, userId, input) =>
-    api.post('/orchestrator/chat', { sessionId, userId, input }),
-
-  // 1.3 获取会话上下文
-  getSession: (sessionId) =>
-    api.get(`/orchestrator/session/${encodeURIComponent(sessionId)}`),
-
-  // 1.4 更新会话上下文
-  updateSession: (sessionId, updates) =>
-    api.post(`/orchestrator/session/${encodeURIComponent(sessionId)}`, updates),
-
-  // 1.5 清除会话
-  deleteSession: (sessionId) =>
-    api.delete(`/orchestrator/session/${encodeURIComponent(sessionId)}`),
-
-  // 1.6 生成专属电台
-  createRadio: (sessionId, mood = 'happy') =>
-    api.post('/orchestrator/radio', { sessionId, mood }),
-
-  // 1.7 生成纪念卡片
-  generateSouvenir: (sessionId, userMessage) =>
-    api.post('/orchestrator/souvenir', { sessionId, userMessage }),
+  return {
+    success: true,
+    code: 200,
+    message: 'success',
+    data: result,
+  };
 };
 
-// ─────────────────────────────────────────────
-// 演唱会信息 (ConcertController)
-// ─────────────────────────────────────────────
+const wrap = async (request) => normalizeResult(await request);
+
 export const concertApi = {
-  getConcerts: (params = {}) => api.get('/concerts', { params }),
-  getConcertById: (id) => api.get(`/concerts/${id}`),
-  getAllSingers: () => api.get('/concerts/singers'),
-  getAllCities: () => api.get('/concerts/cities'),
+  getConcerts: (params = {}) => wrap(api.get('/concerts', { params })),
+  getConcertById: (id) => wrap(api.get(`/concerts/${id}`)),
+  getAllSingers: () => wrap(api.get('/concerts/singers')),
+  getAllCities: () => wrap(api.get('/concerts/cities')),
 };
 
-// ─────────────────────────────────────────────
-// AI 行程规划 (AiPlanningController)
-// ─────────────────────────────────────────────
-export const planningApi = {
-  // 5.1 生成完整行程攻略
-  generatePlan: (data) => api.post('/planning/generate', data),
-  // 5.2 Agent 智能对话规划
-  agentPlan: (userId, message) => api.post('/planning/agent', { userId, message }),
-  // 5.3 获取场馆3D模型
-  getVenue3D: (venueName) => api.get(`/planning/venue/3d/${encodeURIComponent(venueName)}`),
+export const agentApi = {
+  // 通用助手模式（AI助手页面）- 不传递身份
+  chat: ({ sessionId, message, concertId, identity, hasIdentity, singer }) =>
+    wrap(api.post('/agent/chat', { sessionId, userId: getStoredUserId(), message, concertId, identity, hasIdentity, singer })),
+  // 流式聊天 - 支持两种模式
+  // 演唱会专属模式：hasIdentity=true, singer=歌手名, identity=粉丝身份
+  // 通用助手模式：hasIdentity=false/null, 不传递 singer 和 identity
+  chatStream: ({ sessionId, message, concertId, identity, hasIdentity, singer, signal }) => {
+    return fetch('/concert/api/agent/chat/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: sessionId || '',
+        userId: getStoredUserId(),
+        message,
+        concertId,
+        identity,
+        hasIdentity,
+        singer
+      }),
+      signal,
+    });
+  },
+  getHistory: (sessionId) => wrap(api.get(`/agent/history/${sessionId}`)),
+  clearSession: (sessionId) => wrap(api.delete(`/agent/clear/${sessionId}`)),
 };
 
-// ─────────────────────────────────────────────
-// 歌手对话 (CelebrityAgentController)
-// ─────────────────────────────────────────────
-export const celebrityApi = {
-  getList: () => api.get('/celebrity/list'),
-  chat: (sessionId, singer, message) =>
-    api.post('/celebrity/chat', { sessionId, singer, message }),
-  clearSession: (sessionId) =>
-    api.post('/celebrity/clear', null, { params: { sessionId } }),
-  getHistory: (sessionId) =>
-    api.get('/celebrity/history', { params: { sessionId } }),
-};
-
-// ─────────────────────────────────────────────
-// 音乐推荐 (MusicAgentController)
-// ─────────────────────────────────────────────
-export const musicAgentApi = {
-  getMoods: () => api.get('/music/moods'),
-  recommend: (mood, input) => api.post('/music/recommend', { mood, input }),
-  getPlaylist: (singer) => api.get(`/music/playlist/${encodeURIComponent(singer)}`),
-};
-
-// ─────────────────────────────────────────────
-// 交通查询 (TransportController)
-// ─────────────────────────────────────────────
-export const transportApi = {
-  searchDeparture: (data) => api.post('/transport/search/departure', data),
-  searchReturn: (data) => api.post('/transport/search/return', data),
-  searchRoundTrip: (data) => api.post('/transport/search/roundtrip', data),
-};
-
-// ─────────────────────────────────────────────
-// 兼容层（保留旧方法，映射到新接口）
-// ─────────────────────────────────────────────
 export const musicApi = {
-  getPlaylist: (singer) => musicAgentApi.getPlaylist(singer),
+  getPlaylist: (singer) => wrap(api.get(`/music/playlist/${encodeURIComponent(singer)}`)),
   getArtistSongs: async (artistName) => {
     try {
-      const res = await musicAgentApi.getPlaylist(artistName);
-      if (res.success && res.data?.songs) {
-        return res.data.songs.map((s, i) => ({
-          id: `song-${artistName}-${i}`,
-          name: s.name || s.songName || '未知歌曲',
-          artist: s.artist || artistName,
-          cover: s.cover || `https://picsum.photos/300/300?random=${encodeURIComponent(artistName + (s.name || i))}`,
-          url: s.url,
+      const res = await wrap(api.get(`/music/playlist/${encodeURIComponent(artistName)}`));
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        return res.data.map((song, index) => ({
+          id: `song-${artistName}-${index}`,
+          name: song.name || `歌曲${index + 1}`,
+          artist: song.artist || artistName,
+          cover: `https://picsum.photos/seed/${encodeURIComponent(`${artistName}-${song.name || index}`)}/300/300`,
+          url: song.url || '',
           duration: 180000,
-        })).filter(s => s.url);
+          searchUrl: buildSongSearchUrl(song.name || `歌曲${index + 1}`, song.artist || artistName),
+        }));
       }
-      return getFallbackSongs(artistName);
+      return [];
     } catch {
-      return getFallbackSongs(artistName);
+      return [];
     }
   },
 };
 
-const FALLBACK_AUDIO_URLS = [
-  'https://files.freemusicarchive.org/storage-freemusicarchive-org/music/no_curator/Tours/Enthusiast/Tours_-_01_-_Enthusiast.mp3',
-  'https://files.freemusicarchive.org/storage-freemusicarchive-org/music/ccCommunity/Chad_Crouch/Arps/Chad_Crouch_-_Elisions.mp3',
-  'https://files.freemusicarchive.org/storage-freemusicarchive-org/music/ccCommunity/KieLoKaz/Free_Ganymed/KieLoKaz_-_01_-_Reunion_of_the_Spirits_ID_111.mp3',
-  'https://files.freemusicarchive.org/storage-freemusicarchive-org/music/ccCommunity/KieLoKaz/Free_Ganymed/KieLoKaz_-_02_-_Trip_to_Ganymed_ID_112.mp3',
-  'https://files.freemusicarchive.org/storage-freemusicarchive-org/music/ccCommunity/KieLoKaz/Free_Ganymed/KieLoKaz_-_03_-_Sehnsucht_ID_113.mp3',
-];
+export const seatMapApi = {
+  getSeatMap: (concertId) => wrap(api.get(`/seatmap/${concertId}`)),
+};
 
-function getFallbackSongs(artistName) {
-  const defaultSongs = {
-    '周杰伦': ['晴天', '七里香', '告白气球', '夜曲', '稻香'],
-    '林俊杰': ['曹操', '不为谁而作的歌', '可惜没如果', '修炼爱情', '一千年以后'],
-    '陈奕迅': ['十年', '富士山下', '爱情转移', 'K歌之王', '浮夸'],
-    '邓紫棋': ['光年之外', '泡沫', '倒数', '喜欢你', '多远都要在一起'],
-    '五月天': ['突然好想你', '倔强', '恋爱ing', '温柔', '知足'],
-    '薛之谦': ['演员', '丑八怪', '绅士', '刚刚好', '意外'],
-  };
-  const names = defaultSongs[artistName] || ['歌曲1', '歌曲2', '歌曲3', '歌曲4', '歌曲5'];
-  return names.map((name, i) => ({
-    id: `fallback-${artistName}-${i}`,
-    name,
-    artist: artistName,
-    cover: `https://picsum.photos/300/300?random=${encodeURIComponent(artistName)}-${i}`,
-    url: FALLBACK_AUDIO_URLS[i % FALLBACK_AUDIO_URLS.length],
-    duration: 180000,
-  }));
+export const userApi = {
+  follow: (userId, concertId) => wrap(api.post('/user/follow', { userId, concertId })),
+  unfollow: (followId) => wrap(api.delete(`/user/follow/${followId}`)),
+  getFollows: (userId) => wrap(api.get('/user/follows', { params: { userId } })),
+  checkFollow: (userId, concertId) =>
+    wrap(api.get('/user/follow/check', { params: { userId, concertId } })),
+};
+
+export const reminderApi = {
+  // 获取用户提醒列表
+  getList: (userId, limit = 50) => wrap(api.get('/reminders/list', { params: { userId, limit } })),
+  // 获取未读提醒数量
+  getUnreadCount: (userId) => wrap(api.get('/reminders/unread-count', { params: { userId } })),
+  // 获取演唱会相关提醒
+  getConcertReminders: (userId, concertId) => wrap(api.get(`/reminders/concert/${concertId}`, { params: { userId } })),
+  // 创建提醒
+  create: (reminder) => wrap(api.post('/reminders/create', reminder)),
+  // 标记提醒已读
+  markAsRead: (id) => wrap(api.put(`/reminders/${id}/read`)),
+  // 标记所有提醒已读
+  markAllAsRead: (userId) => wrap(api.put('/reminders/read-all', null, { params: { userId } })),
+  // 删除提醒
+  delete: (id) => wrap(api.delete(`/reminders/${id}`)),
+  // 删除演唱会相关提醒
+  deleteConcertReminders: (userId, concertId) => wrap(api.delete(`/reminders/concert/${concertId}`, { params: { userId } })),
+  // 获取待发送提醒（旧接口，保留兼容）
+  getDue: (userId) => wrap(api.get('/reminders/due', { params: { userId } })),
+  clear: (userId) => wrap(api.post('/reminders/clear', null, { params: { userId } })),
+};
+
+function buildSongSearchUrl(name, artist) {
+  const keyword = encodeURIComponent(`${name} ${artist}`);
+  return `https://y.music.163.com/m/search?keyword=${keyword}`;
 }
 
 export default api;

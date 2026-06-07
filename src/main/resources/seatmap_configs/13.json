@@ -1,0 +1,11 @@
+{
+  "concertId": 13,
+  "singer": "大张伟",
+  "venue": "郑州奥林匹克体育中心",
+  "backgroundImage": "/images/concerts/seat_maps/dazhangwei_zhengzhou.jpg",
+  "areas": [
+    {"id": "A1", "name": "内场A1区", "shape": "poly", "coords": "450,200,550,200,550,320,450,320", "priceRange": "¥1831", "description": "VIP区，嗨翻全场"},
+    {"id": "A2", "name": "内场A2区", "shape": "poly", "coords": "550,200,650,200,650,320,550,320", "priceRange": "¥1520", "description": "内场前排"},
+    {"id": "B", "name": "看台区", "shape": "poly", "coords": "200,100,800,100,800,200,200,200", "priceRange": "¥480", "description": "看台区"}
+  ]
+}

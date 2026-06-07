@@ -34,4 +34,10 @@ public class Concert {
 //
 //    @TableField(fill = FieldFill.INSERT_UPDATE)
 //    private LocalDateTime updateTime;
+
+    private String seatMapUrl;
+
+
+    @TableField("has_2d5_view")
+    private Boolean has2d5View;
 }

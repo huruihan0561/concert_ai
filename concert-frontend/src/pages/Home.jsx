@@ -1,562 +1,499 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Music, MapPin, Calendar, Sparkles, ArrowRight, Star, Send, Bot, Loader2, Check, Zap, ChevronDown, Compass } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import Countdown from '../components/Countdown';
+import React, { useState, useRef, Suspense } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Stars, Float, Text3D, Center } from '@react-three/drei';
+import { Music, Calendar, Sparkles, ArrowRight, Star, MessageCircle, Ticket, MapPin } from 'lucide-react';
+import * as THREE from 'three';
 import ConcertCard from '../components/ConcertCard';
-import { concertApi, orchestratorApi } from '../utils/api';
+import ParticleBackground from '../components/ParticleBackground';
+import { concertApi } from '../utils/api';
 import { useApp } from '../context/AppContext';
+import AgentChatWindow from '../components/AgentChatWindow';
+import { getConcertStatus, groupConcertsBySingerAndVenue, formatDate } from '../utils/helpers';
 
-// ============================================================
-//  全屏启动页
-// ============================================================
-const SplashScreen = ({ onExplore }) => {
-  return (
-    <motion.div
-      initial={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.6 }}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 100,
-        background: 'linear-gradient(135deg, #050510 0%, #0a0a1a 50%, #0f0520 100%)',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        overflow: 'hidden',
-      }}
-    >
-      {/* 背景粒子光效 */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-        {[...Array(6)].map((_, i) => (
-          <div key={i} style={{
-            position: 'absolute',
-            borderRadius: '50%',
-            filter: 'blur(80px)',
-            opacity: 0.15,
-            top: `${15 + i * 14}%`,
-            left: `${5 + i * 16}%`,
-            width: `${180 + i * 40}px`,
-            height: `${180 + i * 40}px`,
-            background: i % 2 === 0 ? '#00e5ff' : '#a855f7',
-            animation: `float ${3 + i * 0.7}s ease-in-out infinite alternate`,
-            animationDelay: `${i * 0.4}s`,
-          }} />
-        ))}
-      </div>
-
-      {/* 装饰线 */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-        {[...Array(3)].map((_, i) => (
-          <div key={i} style={{
-            position: 'absolute',
-            height: '1px',
-            width: '100%',
-            top: `${20 + i * 30}%`,
-            background: `linear-gradient(90deg, transparent, rgba(0,229,255,0.1), rgba(168,85,247,0.1), transparent)`,
-          }} />
-        ))}
-      </div>
-
-      {/* Logo 大标 */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.7 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        style={{ position: 'relative', marginBottom: '20px' }}
-      >
-        {/* 外圈光环 */}
-        <div style={{
-          position: 'absolute', inset: '-20px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(0,229,255,0.08) 0%, transparent 70%)',
-          animation: 'pulse-ring 3s ease-in-out infinite',
-        }} />
-        <div style={{
-          width: '96px', height: '96px',
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, #00e5ff, #a855f7)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 0 40px rgba(0,229,255,0.3), 0 0 80px rgba(168,85,247,0.15)',
-          position: 'relative',
-        }}>
-          <Sparkles size={40} color="white" strokeWidth={1.5} />
-          {/* 内光 */}
-          <div style={{
-            position: 'absolute', inset: '4px', borderRadius: '50%',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.2), transparent)',
-          }} />
-        </div>
-      </motion.div>
-
-      {/* 品牌名 */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.7 }}
-        style={{ textAlign: 'center', marginBottom: '8px' }}
-      >
-        <h1 style={{
-          fontSize: '32px', fontWeight: '900', letterSpacing: '-0.5px',
-          background: 'linear-gradient(135deg, #00e5ff, #a855f7, #ec4899)',
-          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-        }}>
-          ConcertAI
-        </h1>
-        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', letterSpacing: '6px', textTransform: 'uppercase', marginTop: '4px' }}>
-          演唱会专属攻略助手
-        </p>
-      </motion.div>
-
-      {/* 副标题 */}
-      <motion.p
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.6 }}
-        style={{ fontSize: '14px', color: 'rgba(255,255,255,0.3)', marginBottom: '48px', textAlign: 'center', maxWidth: '260px', lineHeight: '1.7' }}
-      >
-        全国演唱会一站式 AI 助手<br />交通 · 酒店 · 游玩 · 氛围
-      </motion.p>
-
-      {/* 开始探索按钮 */}
-      <motion.button
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6, duration: 0.5 }}
-        onClick={onExplore}
-        whileHover={{ scale: 1.04, boxShadow: '0 0 32px rgba(0,229,255,0.3)' }}
-        whileTap={{ scale: 0.97 }}
-        style={{
-          padding: '14px 40px',
-          background: 'linear-gradient(135deg, #00e5ff, #a855f7)',
-          border: 'none', borderRadius: '50px',
-          fontSize: '15px', fontWeight: '700', color: 'white',
-          cursor: 'pointer', letterSpacing: '0.5px',
-          boxShadow: '0 0 24px rgba(0,229,255,0.2), 0 0 48px rgba(168,85,247,0.1)',
-          display: 'flex', alignItems: 'center', gap: '10px',
-          marginBottom: '40px',
-        }}
-      >
-        <Compass size={16} />
-        开始探索
-      </motion.button>
-
-      {/* 向下箭头 */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.9, duration: 0.5 }}
-        style={{
-          position: 'absolute', bottom: '32px',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-          cursor: 'pointer',
-        }}
-        onClick={onExplore}
-      >
-        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', letterSpacing: '2px', textTransform: 'uppercase' }}>scroll</span>
-        <motion.div
-          animate={{ y: [0, 6, 0] }}
-          transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
-        >
-          <ChevronDown size={18} color="rgba(255,255,255,0.25)" />
-        </motion.div>
-      </motion.div>
-
-      <style>{`
-        @keyframes pulse-ring {
-          0%, 100% { transform: scale(1); opacity: 0.15; }
-          50% { transform: scale(1.08); opacity: 0.22; }
-        }
-        @keyframes float {
-          from { transform: translateY(0px) scale(1); }
-          to { transform: translateY(-20px) scale(1.05); }
-        }
-      `}</style>
-    </motion.div>
-  );
+// 清除所有用户的对话状态
+const clearAllConversationStates = () => {
+  // 清除所有可能的 current_conversation 键
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('current_conversation_')) {
+      localStorage.removeItem(key);
+    }
+  }
+  // 同时清除其他相关状态
+  localStorage.removeItem('current_conversation');
 };
 
-const THINK_STEPS = [
-  '🔍 解析你的需求...',
-  '🤖 调度 AI Agent...',
-  '🎵 整合信息资源...',
-  '✨ 生成回复内容...',
+// 3D 悬浮卡片组件 - 带框架的双面图片
+function FloatingCard({ position, color, concert, onClick }) {
+  const meshRef = useRef();
+  const [hovered, setHovered] = useState(false);
+
+  // 加载演唱会海报作为纹理
+  const texture = React.useMemo(() => {
+    if (concert.imageUrl) {
+      const loader = new THREE.TextureLoader();
+      const tex = loader.load(concert.imageUrl);
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      return tex;
+    }
+    return null;
+  }, [concert.imageUrl]);
+
+  useFrame((state) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y = Math.sin(state.clock.getElapsedTime() * 0.3) * 0.1;
+      meshRef.current.position.y = position[1] + Math.sin(state.clock.getElapsedTime() * 0.5 + position[0]) * 0.1;
+    }
+  });
+
+  return (
+    <group
+      ref={meshRef}
+      position={position}
+      onPointerOver={() => setHovered(true)}
+      onPointerOut={() => setHovered(false)}
+      onClick={onClick}
+    >
+      {/* 外发光环 */}
+      <mesh scale={hovered ? 1.1 : 1}>
+        <torusGeometry args={[1.2, 0.02, 16, 100]} />
+        <meshBasicMaterial color={color} transparent opacity={0.5} />
+      </mesh>
+
+      {/* 主卡片背景框架 */}
+      <mesh>
+        <boxGeometry args={[2, 2.8, 0.1]} />
+        <meshStandardMaterial
+          color="#0a0a1a"
+          roughness={0.2}
+          metalness={0.8}
+          emissive={color}
+          emissiveIntensity={hovered ? 0.2 : 0.05}
+        />
+      </mesh>
+
+      {/* 海报图片区域 - 正面 */}
+      <mesh position={[0, 0.4, 0.06]}>
+        <planeGeometry args={[1.8, 1.5]} />
+        {texture ? (
+          <meshBasicMaterial map={texture} transparent />
+        ) : (
+          <meshStandardMaterial color={color} roughness={0.4} />
+        )}
+      </mesh>
+
+      {/* 海报图片区域 - 背面 */}
+      <mesh position={[0, 0.4, -0.06]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[1.8, 1.5]} />
+        {texture ? (
+          <meshBasicMaterial map={texture} transparent />
+        ) : (
+          <meshStandardMaterial color={color} roughness={0.4} />
+        )}
+      </mesh>
+
+      {/* 歌手名字背景 - 正面 */}
+      <mesh position={[0, -0.6, 0.06]}>
+        <planeGeometry args={[1.8, 0.4]} />
+        <meshBasicMaterial color="#0a0a1a" transparent opacity={0.9} />
+      </mesh>
+
+      {/* 歌手名字背景 - 背面 */}
+      <mesh position={[0, -0.6, -0.06]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[1.8, 0.4]} />
+        <meshBasicMaterial color="#0a0a1a" transparent opacity={0.9} />
+      </mesh>
+
+      {/* 装饰线条 - 正面 */}
+      <mesh position={[0, -0.8, 0.06]}>
+        <boxGeometry args={[1.6, 0.02, 0.02]} />
+        <meshBasicMaterial color={color} />
+      </mesh>
+
+      {/* 装饰线条 - 背面 */}
+      <mesh position={[0, -0.8, -0.06]} rotation={[0, Math.PI, 0]}>
+        <boxGeometry args={[1.6, 0.02, 0.02]} />
+        <meshBasicMaterial color={color} />
+      </mesh>
+    </group>
+  );
+}
+
+// 固定的专辑封面数据
+const featuredAlbums = [
+  {
+    id: 1,
+    singer: '张杰',
+    title: '听！我们的歌',
+    imageUrl: '/images/zhangjie.jpg',
+    color: '#00e5ff',
+  },
+  {
+    id: 2,
+    singer: '邓紫棋',
+    title: '新的心跳',
+    imageUrl: '/images/dengziqi.jpg',
+    color: '#a855f7',
+  },
+  {
+    id: 3,
+    singer: 'BTS',
+    title: 'BTS, THE BEST',
+    imageUrl: '/images/bts.jpg',
+    color: '#f472b6',
+  },
 ];
 
-const Home = () => {
+// 3D 场景组件
+function Scene3D({ onCardClick }) {
+  const groupRef = useRef();
+
+  useFrame((state) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y = Math.sin(state.clock.getElapsedTime() * 0.05) * 0.05;
+    }
+  });
+
+  return (
+    <>
+      <ambientLight intensity={0.5} />
+      <pointLight position={[10, 10, 10]} intensity={1} color="#00e5ff" />
+      <pointLight position={[-10, -10, -10]} intensity={0.5} color="#a855f7" />
+
+      <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+
+      <group ref={groupRef}>
+        {featuredAlbums.map((album, index) => (
+          <FloatingCard
+            key={album.id}
+            position={[(index - 1) * 3, 0, 0]}
+            color={album.color}
+            concert={album}
+            onClick={() => onCardClick?.(album)}
+          />
+        ))}
+      </group>
+
+      <OrbitControls
+        enableZoom={false}
+        enablePan={false}
+        autoRotate
+        autoRotateSpeed={0.5}
+        maxPolarAngle={Math.PI / 2}
+        minPolarAngle={Math.PI / 2}
+      />
+    </>
+  );
+}
+
+const features = [
+  {
+    icon: Music,
+    title: '海量演唱会',
+    description: '全国热门演唱会一网打尽，实时更新场次信息',
+    color: 'from-cyan-400 to-blue-500',
+    glow: 'rgba(34,211,238,0.18)',
+  },
+  {
+    icon: MessageCircle,
+    title: 'AI 行程助手',
+    description: '周边美食、酒店、打车，美团服务一键直达',
+    color: 'from-fuchsia-400 to-pink-500',
+    glow: 'rgba(168,85,247,0.18)',
+  },
+  {
+    icon: Calendar,
+    title: '关注与提醒',
+    description: '关注演唱会，开演前自动收到贴心提醒',
+    color: 'from-pink-400 to-orange-400',
+    glow: 'rgba(236,72,153,0.18)',
+  },
+  {
+    icon: Star,
+    title: '歌手歌单',
+    description: '一键播放歌手热门歌曲，提前感受现场氛围',
+    color: 'from-amber-400 to-yellow-300',
+    glow: 'rgba(245,158,11,0.18)',
+  },
+];
+
+const Home = ({ onSelectSinger }) => {
   const [featuredConcerts, setFeaturedConcerts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { selectConcert, orchSession, orchUserId } = useApp();
+  const [showChat, setShowChat] = useState(false);
+  const { selectConcert } = useApp();
   const navigate = useNavigate();
 
-  const [chatInput, setChatInput] = useState('');
-  const [orchMessages, setOrchMessages] = useState([]);
-  const [orchLoading, setOrchLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState(-1);
-  const chatEndRef = useRef(null);
-  const stepTimerRef = useRef(null);
-
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchConcerts = async () => {
       try {
-        const response = await concertApi.getConcerts({ page: 0, size: 6 });
-        if (response.success && response.data) {
-          setFeaturedConcerts(response.data.records || []);
+        const res = await concertApi.getConcerts({ page: 0, size: 30 });
+        if (res.success && res.data) {
+          const records = Array.isArray(res.data)
+            ? res.data
+            : res.data.records || [];
+          const groupedConcerts = groupConcertsBySingerAndVenue(records);
+          setFeaturedConcerts(groupedConcerts.slice(0, 7));
         }
-      } catch (error) {
-        console.error('Failed to fetch concerts:', error);
+      } catch (e) {
+        console.error('加载演唱会失败:', e);
       } finally {
         setLoading(false);
       }
     };
-
     fetchConcerts();
   }, []);
 
-  // 自动滚动对话
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [orchMessages]);
-
-  const handleOrchChat = async () => {
-    if (!chatInput.trim() || orchLoading) return;
-    const input = chatInput.trim();
-    setChatInput('');
-    setOrchMessages(prev => [...prev, { role: 'user', content: input }]);
-    setOrchLoading(true);
-
-    setCurrentStep(0);
-    stepTimerRef.current = setInterval(() => {
-      setCurrentStep(prev => prev < THINK_STEPS.length - 1 ? prev + 1 : prev);
-    }, 600);
-
-    try {
-      if (orchSession) {
-        const res = await orchestratorApi.chat(orchSession, Number(orchUserId), input);
-        if (res.success) {
-          setOrchMessages(prev => [...prev, { role: 'assistant', content: res.data }]);
-        }
-      } else {
-        // 无 session，直接跳转规划页
-        setOrchMessages(prev => [...prev, {
-          role: 'assistant',
-          content: '好的，正在为你跳转行程规划页面...'
-        }]);
-        setTimeout(() => navigate('/agent/planning'), 1000);
-      }
-    } catch (err) {
-      setOrchMessages(prev => [...prev, {
-        role: 'assistant',
-        content: '抱歉，服务暂时不可用，请稍后重试。'
-      }]);
-    } finally {
-      clearInterval(stepTimerRef.current);
-      setOrchLoading(false);
-      setCurrentStep(-1);
-    }
+  const handleConcertClick = (concert) => {
+    const detailConcert = concert.groupedShows?.[0] || concert;
+    selectConcert(detailConcert);
+    navigate(`/concerts/${detailConcert.id}`);
   };
 
-  const features = [
-    {
-      icon: Music,
-      title: '智能行程规划',
-      description: 'AI 根据您的预算和偏好，自动生成最优演唱会出行方案',
-      color: 'from-neon-blue to-cyan-500',
-    },
-    {
-      icon: MapPin,
-      title: '3D 场馆预览',
-      description: '沉浸式 3D 场馆模型，提前熟悉座位视角和入口位置',
-      color: 'from-neon-purple to-pink-500',
-    },
-    {
-      icon: Calendar,
-      title: '一站式服务',
-      description: '交通、酒店、美食、景点，一站式解决所有出行需求',
-      color: 'from-neon-pink to-orange-500',
-    },
-    {
-      icon: Sparkles,
-      title: '氛围体验',
-      description: '艺人专属歌单、倒计时提醒，打造沉浸式演唱会氛围',
-      color: 'from-orange-500 to-yellow-500',
-    },
-  ];
-
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-screen pt-20 pb-8">
+      {/* 3D 粒子背景 */}
+      <ParticleBackground />
 
-      {/* ============================================================ */}
-      {/*  全屏启动页 (Splash Screen)                                  */}
-      {/* ============================================================ */}
-      <SplashScreen onExplore={() => {
-        const el = document.getElementById('main-content');
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
-      }} />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-      {/* ============================================================ */}
-      {/*  主页面内容                                                */}
-      {/* ============================================================ */}
-      <div id="main-content">
-
-      {/* Hero Section */}
-      <section className="relative min-h-[70vh] flex items-start justify-center overflow-hidden">
-        <div className="absolute inset-0 grid-bg opacity-50" />
-
-        <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 w-full">
-          {/* 标题 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-8"
-          >
-            <span className="inline-flex items-center px-4 py-2 rounded-full bg-neon-blue/10 border border-neon-blue/30 text-neon-blue text-sm font-medium mb-4">
-              <Sparkles className="w-4 h-4 mr-2" />
-              全国奥体中心演唱会专属助手
-            </span>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-3">
-              <span className="gradient-text">演唱会</span>
-              <span className="text-white"> AI 攻略助手</span>
-            </h1>
-            <p className="text-gray-400 text-base">
-              一站式解决交通、酒店、游玩路线，打造专属演唱会氛围体验
-            </p>
-          </motion.div>
-
-          {/* 对话输入区 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="glass rounded-2xl border border-white/10 mb-10 overflow-hidden"
-          >
-            {/* 对话区域 */}
-            <div className="h-56 overflow-y-auto p-4 space-y-3">
-              {orchMessages.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-gray-500 text-sm">
-                  <Bot className="w-10 h-10 mb-3 opacity-30" />
-                  <p>试试说："我想看周杰伦演唱会，帮我规划行程"</p>
-                  <p className="text-xs mt-1 opacity-60">或："推荐一首适合演唱会气氛的歌"</p>
-                </div>
-              )}
-              <AnimatePresence>
-                {orchMessages.map((msg, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm ${
-                      msg.role === 'user'
-                        ? 'bg-neon-blue text-white rounded-br-md'
-                        : 'glass border border-white/10 text-gray-200 rounded-bl-md'
-                    }`}>
-                      {msg.content}
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-
-              {/* AI 思考步骤 */}
-              {orchLoading && (
-                <div className="space-y-1.5">
-                  {THINK_STEPS.map((step, i) => (
-                    <div key={i} className={`flex items-center space-x-2 text-xs px-3 py-1.5 rounded-lg ${
-                      i < currentStep ? 'text-green-400 bg-green-500/5'
-                        : i === currentStep ? 'text-neon-blue bg-neon-blue/10 border border-neon-blue/20'
-                        : 'text-gray-600'
-                    }`}>
-                      {i < currentStep
-                        ? <Check className="w-3 h-3" />
-                        : i === currentStep
-                        ? <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
-                            <Zap className="w-3 h-3" />
-                          </motion.div>
-                        : <Bot className="w-3 h-3" />
-                      }
-                      <span>{step}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div ref={chatEndRef} />
-            </div>
-
-            {/* 输入框 */}
-            <div className="border-t border-white/10 p-3 flex space-x-2">
-              <input
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleOrchChat()}
-                placeholder="告诉 AI 管家你的需求..."
-                className="flex-1 px-4 py-2.5 glass rounded-xl border border-white/10 focus:border-neon-blue/50 focus:outline-none text-white text-sm bg-transparent"
-              />
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleOrchChat}
-                disabled={orchLoading || !chatInput.trim()}
-                className="px-4 py-2.5 bg-gradient-to-r from-neon-blue to-neon-purple rounded-xl text-white disabled:opacity-40 flex items-center space-x-1.5"
+        {/* Hero Section with 3D */}
+        <section className="relative pt-8 pb-14">
+          <div className="grid lg:grid-cols-2 gap-8 items-center">
+            {/* 左侧文字 */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              className="relative z-10"
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full mb-6"
+                style={{ background: 'rgba(0,229,255,0.1)', border: '1px solid rgba(0,229,255,0.3)' }}
               >
-                {orchLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                <span className="text-sm">发送</span>
-              </motion.button>
-            </div>
-          </motion.div>
+                <Sparkles className="w-4 h-4 text-cyan-400" />
+                <span className="text-sm font-medium text-cyan-300">AI 智能演唱会助手</span>
+              </motion.div>
 
-          {/* 四大能力 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight"
+              >
+                发现你的
+                <span className="block mt-2 bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
+                  下一场演唱会
+                </span>
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-lg text-gray-400 mb-8 max-w-lg"
+              >
+                智能行程规划、座位推荐、抢票提醒，让每一次观演都成为美好回忆
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="flex flex-wrap gap-4"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate('/concerts')}
+                  className="px-8 py-4 rounded-xl text-sm font-semibold flex items-center gap-2.5 transition-all"
+                  style={{
+                    background: 'linear-gradient(135deg, #00e5ff, #a855f7)',
+                    boxShadow: '0 8px 32px rgba(0,229,255,0.3)',
+                    color: 'white',
+                  }}
+                >
+                  <Ticket className="w-4 h-4" />
+                  探索演唱会
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    // 清除所有对话状态，确保显示 AI 助手首页（外层页面）
+                    clearAllConversationStates();
+                    navigate('/agent');
+                  }}
+                  className="px-8 py-4 rounded-xl text-sm font-semibold flex items-center gap-2.5 transition-all"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    color: 'white',
+                  }}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  问 AI 助手
+                </motion.button>
+              </motion.div>
+            </motion.div>
+
+            {/* 右侧 3D 场景 */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="relative h-[400px] lg:h-[500px]"
+            >
+              <Canvas
+                camera={{ position: [0, 0, 8], fov: 50 }}
+                gl={{ antialias: true, alpha: true }}
+                style={{ background: 'transparent' }}
+              >
+                <Suspense fallback={null}>
+                  <Scene3D onCardClick={handleConcertClick} />
+                </Suspense>
+              </Canvas>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Features */}
+        <section className="mb-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+          >
+            {features.map((feat, i) => {
+              const Icon = feat.icon;
               return (
                 <motion.div
-                  key={feature.title}
+                  key={feat.title}
                   initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 + index * 0.08 }}
-                  whileHover={{ y: -6 }}
-                  className="glass rounded-2xl p-4 cursor-pointer card-hover"
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  whileHover={{ y: -5, scale: 1.02 }}
+                  className="rounded-2xl p-5 text-center group cursor-pointer"
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}
                 >
-                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-r ${feature.color} flex items-center justify-center mb-3`}>
-                    <Icon className="w-5 h-5 text-white" />
+                  <div
+                    className="w-12 h-12 rounded-2xl mx-auto mb-4 flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+                    style={{ background: feat.glow }}
+                  >
+                    <Icon className="w-6 h-6" style={{ color: feat.color.includes('cyan') ? '#22d3ee' : feat.color.includes('fuchsia') ? '#a855f7' : feat.color.includes('pink') ? '#f472b6' : '#fbbf24' }} />
                   </div>
-                  <h3 className="text-sm font-bold text-white mb-1">{feature.title}</h3>
-                  <p className="text-gray-400 text-xs leading-relaxed">{feature.description}</p>
+                  <p className="text-white text-sm font-semibold mb-2">{feat.title}</p>
+                  <p className="text-gray-500 text-xs leading-relaxed">{feat.description}</p>
                 </motion.div>
               );
             })}
-          </div>
-
-          {/* 底部快捷操作 */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="flex items-center justify-center gap-4 mt-8"
-          >
-            <Link
-              to="/concerts"
-              className="btn-primary flex items-center space-x-2 text-sm px-6 py-3"
-            >
-              <Music className="w-4 h-4" />
-              <span>探索演唱会</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              to="/agent"
-              className="btn-secondary flex items-center space-x-2 text-sm px-6 py-3"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>智能助手</span>
-            </Link>
           </motion.div>
-        </div>
+        </section>
 
-        {/* Floating Elements */}
-        <div className="absolute top-20 left-10 w-20 h-20 rounded-full bg-neon-blue/20 blur-xl animate-float" />
-        <div className="absolute bottom-20 right-10 w-32 h-32 rounded-full bg-neon-purple/20 blur-xl animate-float" style={{ animationDelay: '2s' }} />
-        <div className="absolute top-1/2 left-1/4 w-16 h-16 rounded-full bg-neon-pink/20 blur-xl animate-float" style={{ animationDelay: '4s' }} />
-      </section>
-
-      {/* Featured Concerts Section */}
-      <section className="py-20 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Featured Concerts */}
+        <section>
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="flex items-center justify-between mb-12"
+            className="flex items-center justify-between mb-6"
           >
             <div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-2">
-                热门演唱会
-              </h2>
-              <p className="text-gray-400">精选全国热门演出，一键规划行程</p>
+              <h2 className="text-2xl font-bold text-white">热门演唱会</h2>
+              <p className="text-gray-500 text-sm mt-1">精选场次，即将开演</p>
             </div>
-            <Link
-              to="/concerts"
-              className="hidden sm:flex items-center space-x-2 text-neon-blue hover:text-neon-purple transition-colors"
+            <motion.button
+              whileHover={{ x: 5 }}
+              onClick={() => navigate('/concerts')}
+              className="text-sm text-cyan-400 hover:text-fuchsia-400 flex items-center gap-1.5 transition-colors"
             >
-              <span>查看全部</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+              查看全部 <ArrowRight className="w-4 h-4" />
+            </motion.button>
           </motion.div>
 
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="glass rounded-2xl h-80 animate-pulse" />
+                <div key={i} className="rounded-2xl h-80 animate-pulse"
+                  style={{ background: 'rgba(255,255,255,0.05)' }} />
               ))}
             </div>
-          ) : (
+          ) : featuredConcerts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredConcerts.slice(0, 6).map((concert, index) => (
+              {featuredConcerts.slice(0, 3).map((concert, index) => (
                 <motion.div
                   key={concert.id}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.1 }}
+                  whileHover={{ y: -8 }}
                 >
                   <ConcertCard
-                    concert={concert}
-                    onClick={() => selectConcert(concert)}
-                    isSelected={false}
+                    concert={{
+                      ...concert,
+                      status: getConcertStatus(concert.showTime),
+                    }}
+                    onClick={handleConcertClick}
                   />
                 </motion.div>
               ))}
             </div>
-          )}
-
-          <div className="mt-8 text-center sm:hidden">
-            <Link
-              to="/concerts"
-              className="btn-secondary inline-flex items-center space-x-2"
-            >
-              <span>查看全部演唱会</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 relative">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="glass rounded-3xl p-8 sm:p-12 text-center border border-neon-blue/30 relative overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-neon-blue/10 to-neon-purple/10" />
-
-            <div className="relative z-10">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-r from-neon-blue to-neon-purple flex items-center justify-center mx-auto mb-6">
-                <Star className="w-8 h-8 text-white" />
-              </div>
-
-              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-                准备好开始你的演唱会之旅了吗？
-              </h2>
-              <p className="text-gray-400 mb-8 max-w-xl mx-auto">
-                选择心仪的演唱会，让 AI 为你规划完美的行程
-                从出发到返程，每一个细节都为你考虑周全
-              </p>
-
-              <Link
-                to="/agent"
-                className="btn-primary inline-flex items-center space-x-2 text-lg px-8 py-4"
-              >
-                <Sparkles className="w-5 h-5" />
-                <span>立即开始规划</span>
-                <ArrowRight className="w-5 h-5" />
-              </Link>
+          ) : (
+            <div className="text-center py-16" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              <Music className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p>暂无演唱会数据，请确认后端服务已启动</p>
             </div>
-          </motion.div>
-        </div>
-      </section>
-      </div>{/* /#main-content */}
+          )}
+        </section>
+
+        {/* Special Offers Banner */}
+        <section className="mt-8 mb-12">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { title: '新用户专享', desc: '首单立减15元', tag: '限时', color: 'from-yellow-400 to-orange-500' },
+              { title: '酒店特惠', desc: '演唱会周边低至5折', tag: '爆款', color: 'from-purple-400 to-pink-500' },
+              { title: '打车福利', desc: '出行立减8元', tag: '热卖', color: 'from-blue-400 to-cyan-500' },
+              { title: '美食套餐', desc: '双人套餐立减30', tag: '推荐', color: 'from-green-400 to-emerald-500' },
+            ].map((offer, i) => (
+              <motion.div
+                key={offer.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="rounded-xl p-4 cursor-pointer hover:scale-105 transition-transform"
+                style={{ background: `linear-gradient(135deg, ${offer.color})` }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-white text-sm font-bold">{offer.title}</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-white/20 text-white">{offer.tag}</span>
+                </div>
+                <p className="text-white/80 text-xs">{offer.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+      </div>
+
+      <AgentChatWindow
+        isOpen={showChat}
+        onClose={() => setShowChat(false)}
+        title="演唱会 AI 助手"
+      />
     </div>
   );
 };

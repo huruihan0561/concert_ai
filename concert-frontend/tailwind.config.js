@@ -27,6 +27,7 @@ export default {
           pink: '#ff00ff',
           purple: '#bf00ff',
           green: '#00ff9f',
+          orange: '#f97316',
         },
         dark: {
           900: '#0a0a0f',

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,7 +23,6 @@ public class ConcertServiceImpl extends ServiceImpl<ConcertMapper, Concert> impl
 
     @Override
     public PageInfo<Concert> listConcerts(String city, String singer, int page, int size) {
-        // 构建查询条件
         LambdaQueryWrapper<Concert> wrapper = new LambdaQueryWrapper<>();
         wrapper.ge(Concert::getShowTime, LocalDateTime.now())
                 .orderByAsc(Concert::getShowTime);
@@ -34,15 +34,12 @@ public class ConcertServiceImpl extends ServiceImpl<ConcertMapper, Concert> impl
             wrapper.eq(Concert::getSinger, singer);
         }
 
-        // 查询所有符合条件的
         List<Concert> allConcerts = this.list(wrapper);
 
-        // 手动分页
         int start = page * size;
         int end = Math.min(start + size, allConcerts.size());
         List<Concert> pageList = allConcerts.subList(start, end);
 
-        // 构建分页结果
         PageInfo<Concert> pageInfo = new PageInfo<>();
         pageInfo.setRecords(pageList);
         pageInfo.setTotal(allConcerts.size());
@@ -56,6 +53,14 @@ public class ConcertServiceImpl extends ServiceImpl<ConcertMapper, Concert> impl
     @Override
     public Concert getConcertById(Long id) {
         return this.getById(id);
+    }
+
+    @Override
+    public List<Concert> getConcertsByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return this.listByIds(ids);
     }
 
     @Override
@@ -78,5 +83,14 @@ public class ConcertServiceImpl extends ServiceImpl<ConcertMapper, Concert> impl
         return this.list(wrapper).stream()
                 .map(Concert::getCity)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Concert> findBySinger(String singer) {
+        LambdaQueryWrapper<Concert> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Concert::getSinger, singer)
+                .ge(Concert::getShowTime, LocalDateTime.now())
+                .orderByAsc(Concert::getShowTime);
+        return this.list(wrapper);
     }
 }

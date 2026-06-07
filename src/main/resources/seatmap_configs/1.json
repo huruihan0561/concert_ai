@@ -1,0 +1,80 @@
+{
+  "concertId": 1,
+  "singer": "薛之谦",
+  "venue": "洛阳市奥林匹克中心体育场",
+  "backgroundImage": "/images/concerts/seat_maps/xuezhiqian_luoyang.jpg",
+  "areas": [
+    {
+      "id": "A1",
+      "name": "A1区",
+      "shape": "poly",
+      "coords": "450,200,550,200,550,280,450,280",
+      "priceRange": "¥1717",
+      "description": "内场前排，正对舞台中央，最佳观演位置"
+    },
+    {
+      "id": "A2",
+      "name": "A2区",
+      "shape": "poly",
+      "coords": "550,200,650,200,650,280,550,280",
+      "priceRange": "¥1517",
+      "description": "内场右侧，靠近舞台，视野开阔"
+    },
+    {
+      "id": "A3",
+      "name": "A3区",
+      "shape": "poly",
+      "coords": "350,200,450,200,450,280,350,280",
+      "priceRange": "¥1517",
+      "description": "内场左侧，靠近舞台"
+    },
+    {
+      "id": "A4",
+      "name": "A4区",
+      "shape": "poly",
+      "coords": "450,280,550,280,550,360,450,360",
+      "priceRange": "¥1317",
+      "description": "内场中排，视野极佳"
+    },
+    {
+      "id": "B1",
+      "name": "B1区",
+      "shape": "poly",
+      "coords": "350,280,450,280,450,360,350,360",
+      "priceRange": "¥917",
+      "description": "内场左侧后方"
+    },
+    {
+      "id": "B2",
+      "name": "B2区",
+      "shape": "poly",
+      "coords": "550,280,650,280,650,360,550,360",
+      "priceRange": "¥917",
+      "description": "内场右侧后方"
+    },
+    {
+      "id": "C1",
+      "name": "看台一层",
+      "shape": "poly",
+      "coords": "150,150,350,150,350,280,150,280",
+      "priceRange": "¥717",
+      "description": "看台左侧，有一定高度"
+    },
+    {
+      "id": "C2",
+      "name": "看台二层",
+      "shape": "poly",
+      "coords": "650,150,850,150,850,280,650,280",
+      "priceRange": "¥717",
+      "description": "看台右侧"
+    },
+    {
+      "id": "D",
+      "name": "看台高层",
+      "shape": "poly",
+      "coords": "100,100,900,100,900,150,100,150",
+      "priceRange": "¥317",
+      "description": "经济实惠，全场氛围都很好"
+    }
+  ]
+}

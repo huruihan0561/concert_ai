@@ -21,7 +21,16 @@ public class UserSession implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private String sessionId;
-    private Long userId;
+    private String userId;
+
+    /** 当前选定的演唱会ID */
+    private Long concertId;
+
+    /** 身份信息，如"汪苏泷粉丝" */
+    private String identity;
+
+    /** 是否带有身份（从演唱会详情页打开） */
+    private Boolean hasIdentity;
 
     /** 当前选定的演唱会歌手 */
     private String selectedSinger;

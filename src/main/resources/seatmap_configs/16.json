@@ -1,0 +1,48 @@
+{
+  "concertId": 16,
+  "singer": "凤凰传奇",
+  "venue": "南京奥体中心体育场",
+  "backgroundImage": "/images/concerts/seat_maps/fenghuangchuanqi_nanjing.jpg",
+  "areas": [
+    {
+      "id": "A1",
+      "name": "A1区",
+      "shape": "poly",
+      "coords": "450,200,530,200,530,300,450,300",
+      "priceRange": "¥1380",
+      "description": "内场前排，正对舞台，全场最嗨"
+    },
+    {
+      "id": "A2",
+      "name": "A2区",
+      "shape": "poly",
+      "coords": "530,200,610,200,610,300,530,300",
+      "priceRange": "¥1080",
+      "description": "内场右侧"
+    },
+    {
+      "id": "A3",
+      "name": "A3区",
+      "shape": "poly",
+      "coords": "370,200,450,200,450,300,370,300",
+      "priceRange": "¥1080",
+      "description": "内场左侧"
+    },
+    {
+      "id": "B",
+      "name": "看台区",
+      "shape": "poly",
+      "coords": "200,100,700,100,700,200,200,200",
+      "priceRange": "¥580",
+      "description": "看台区，跟着唱就完事了"
+    },
+    {
+      "id": "C",
+      "name": "山顶区",
+      "shape": "poly",
+      "coords": "120,50,780,50,780,100,120,100",
+      "priceRange": "¥380",
+      "description": "经济实惠，氛围一样炸"
+    }
+  ]
+}
